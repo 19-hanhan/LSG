@@ -1,0 +1,5 @@
+# Hashes of file build rules.
+041bb3c993c16f67223d27b5d6072682 faiss/python/CMakeFiles/swigfaiss.dir/swigfaissPYTHON.stamp
+eb2f90a4f096fa5713392441238a57ae faiss/python/CMakeFiles/swigfaiss_avx2.dir/swigfaiss_avx2PYTHON.stamp
+4b62fb8a42573c4d662f884767158efa faiss/python/CMakeFiles/swigfaiss_avx2_swig_compilation
+4b62fb8a42573c4d662f884767158efa faiss/python/CMakeFiles/swigfaiss_swig_compilation
