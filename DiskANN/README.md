@@ -1,46 +1,13 @@
 # DiskANN
 
-[![DiskANN Main](https://github.com/microsoft/DiskANN/actions/workflows/push-test.yml/badge.svg?branch=main)](https://github.com/microsoft/DiskANN/actions/workflows/push-test.yml)
-[![PyPI version](https://img.shields.io/pypi/v/diskannpy.svg)](https://pypi.org/project/diskannpy/)
-[![Downloads shield](https://pepy.tech/badge/diskannpy)](https://pepy.tech/project/diskannpy)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+This project is based on Ubuntu 18.04.
 
-[![DiskANN Paper](https://img.shields.io/badge/Paper-NeurIPS%3A_DiskANN-blue)](https://papers.nips.cc/paper/9527-rand-nsg-fast-accurate-billion-point-nearest-neighbor-search-on-a-single-node.pdf)
-[![DiskANN Paper](https://img.shields.io/badge/Paper-Arxiv%3A_Fresh--DiskANN-blue)](https://arxiv.org/abs/2105.09613)
-[![DiskANN Paper](https://img.shields.io/badge/Paper-Filtered--DiskANN-blue)](https://harsha-simhadri.org/pubs/Filtered-DiskANN23.pdf)
+## Project Build:
 
-
-DiskANN is a suite of scalable, accurate and cost-effective approximate nearest neighbor search algorithms for large-scale vector search that support real-time changes and simple filters.
-This code is based on ideas from the [DiskANN](https://papers.nips.cc/paper/9527-rand-nsg-fast-accurate-billion-point-nearest-neighbor-search-on-a-single-node.pdf), [Fresh-DiskANN](https://arxiv.org/abs/2105.09613) and the [Filtered-DiskANN](https://harsha-simhadri.org/pubs/Filtered-DiskANN23.pdf) papers with further improvements. 
-This code forked off from [code for NSG](https://github.com/ZJULearning/nsg) algorithm.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-See [guidelines](CONTRIBUTING.md) for contributing to this project.
-
-## Linux build:
-
-Install the following packages through apt-get
+Install the following dependencies:
 
 ```bash
-sudo apt install make cmake g++ libaio-dev libgoogle-perftools-dev clang-format libboost-all-dev
-```
-
-### Install Intel MKL
-#### Ubuntu 20.04 or newer
-```bash
-sudo apt install libmkl-full-dev
-```
-
-#### Earlier versions of Ubuntu
-Install Intel MKL either by downloading the [oneAPI MKL installer](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html) or using [apt](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo) (we tested with build 2019.4-070 and 2022.1.2.146).
-
-```
-# OneAPI MKL Installer
-wget https://registrationcenter-download.intel.com/akdlm/irc_nas/18487/l_BaseKit_p_2022.1.2.146.sh
-sudo sh l_BaseKit_p_2022.1.2.146.sh -a --components intel.oneapi.lin.mkl.devel --action install --eula accept -s
+sudo apt install make cmake g++ libaio-dev libgoogle-perftools-dev clang-format libboost-all-dev libmkl-full-dev
 ```
 
 ### Build
@@ -48,66 +15,53 @@ sudo sh l_BaseKit_p_2022.1.2.146.sh -a --components intel.oneapi.lin.mkl.devel -
 mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make -j 
 ```
 
-## Windows build:
+## Running the LSG Scheme
 
-The Windows version has been tested with Enterprise editions of Visual Studio 2022, 2019 and 2017. It should work with the Community and Professional editions as well without any changes. 
+For DiskANN-specific parameters, refer to the documentation in `workflows/in_memory_index.md` and `workflows/SSD_index.md`.
 
-**Prerequisites:**
+### Preparing Project Data Files
 
-* CMake 3.15+ (available in VisualStudio 2019+ or from https://cmake.org)
-* NuGet.exe (install from https://www.nuget.org/downloads)
-    * The build script will use NuGet to get MKL, OpenMP and Boost packages.
-* DiskANN git repository checked out together with submodules. To check out submodules after git clone:
-```
-git submodule init
-git submodule update
-```
+If the experimental data is in `fvecs` format, DiskANN requires it to be converted to a custom `fbin` format. You can use the built-in methods for conversion.
 
-* Environment variables: 
-    * [optional] If you would like to override the Boost library listed in windows/packages.config.in, set BOOST_ROOT to your Boost folder.
+To validate the accuracy of the queries, you also need to compute the ground truth (gt) of the queries. The built-in method `compute_groundtruth` uses concurrent linear search to obtain the results.
 
-**Build steps:**
-* Open the "x64 Native Tools Command Prompt for VS 2019" (or corresponding version) and change to DiskANN folder
-* Create a "build" directory inside it
-* Change to the "build" directory and run
-```
-cmake ..
-```
-OR for Visual Studio 2017 and earlier:
-```
-<full-path-to-installed-cmake>\cmake ..
-```
-**This will create a diskann.sln solution**. Now you can:
+Here is the specific code, where the variables can be replaced with custom data files and output paths:
 
-- Open it from VisualStudio and build either Release or Debug configuration.
-- `<full-path-to-installed-cmake>\cmake --build build`
-- Use MSBuild:
-```
-msbuild.exe diskann.sln /m /nologo /t:Build /p:Configuration="Release" /property:Platform="x64"
+```bash
+./apps/utils/fvecs_to_bin float $data_file $data_path
+./apps/utils/fvecs_to_bin float $query_file $query_path
+./apps/utils/compute_groundtruth  --data_type float --dist_fn $dis_method --base_file $data_path --query_file $query_path --gt_file $gt_path --K $K
 ```
 
-* This will also build gperftools submodule for libtcmalloc_minimal dependency.
-* Generated binaries are stored in the x64/Release or x64/Debug directories.
+The query file usage is the same as in DiskANN. To run the LSG method, we also need a sample dataset file and the knn file for the sample (equivalent to the sample's gt). Here is the specific code, where `sr_file` can be sampled from the `fvecs` dataset file:
 
-## Usage:
-
-Please see the following pages on using the compiled code:
-
-- [Commandline interface for building and search SSD based indices](workflows/SSD_index.md)  
-- [Commandline interface for building and search in memory indices](workflows/in_memory_index.md) 
-- [Commandline examples for using in-memory streaming indices](workflows/dynamic_index.md)
-- [Commandline interface for building and search in memory indices with label data and filters](workflows/filtered_in_memory.md)
-- [Commandline interface for building and search SSD based indices with label data and filters](workflows/filtered_ssd_index.md)
-- [diskannpy - DiskANN as a python extension module](python/README.md)
-
-Please cite this software in your work as:
-
+```bash
+./apps/utils/fvecs_to_bin float $sr_file $sr_path
+./apps/utils/compute_groundtruth  --data_type float --dist_fn $dis_method --base_file $sr_path --query_file $data_path --gt_file $sr_knn_path --K $K
 ```
-@misc{diskann-github,
-   author = {Simhadri, Harsha Vardhan and Krishnaswamy, Ravishankar and Srinivasa, Gopal and Subramanya, Suhas Jayaram and Antonijevic, Andrija and Pryce, Dax and Kaczynski, David and Williams, Shane and Gollapudi, Siddarth and Sivashankar, Varun and Karia, Neel and Singh, Aditi and Jaiswal, Shikhar and Mahapatro, Neelam and Adams, Philip and Tower, Bryan and Patel, Yash}},
-   title = {{DiskANN: Graph-structured Indices for Scalable, Fast, Fresh and Filtered Approximate Nearest Neighbor Search}},
-   url = {https://github.com/Microsoft/DiskANN},
-   version = {0.6.1},
-   year = {2023}
-}
+
+This setup can be executed via the `opt/prepare.sh` script, which corresponds to the above code for reference.
+
+### Running LSG + Vamana In-Memory Graph Construction
+
+We have integrated the LSG scheme into DiskANN's in-memory graph construction method. The method is invoked the same way as in DiskANN, with two additional parameters, `$sr_knn_path` and `$ls_alpha`, representing the sample dataset knn file path and an adjustable LSG parameter (usually set to 1.0).
+
+```bash
+./apps/build_memory_index  --data_type float --dist_fn $build_dis_method --knn_path $sr_knn_path --data_path $data_path --index_path_prefix $index_path_prefix -T $T -R $R -L $L -a $ls_alpha --alpha 1.2
+
+./apps/search_memory_index  --data_type float --dist_fn $search_dis_method --index_path_prefix $index_path_prefix --query_file $query_path  --gt_file $gt_path --result_path $res_path_prefix -K $recall_K -T $T -L 10 20 30 40 50 60 80 100
 ```
+
+This setup can be executed via the `opt/memory.sh` script, which corresponds to the above code for reference.
+
+### Running LSG + Vamana Sharded Graph Construction
+
+Similar to the in-memory method, the sharded graph construction is also based on DiskANN. The parameters `$sr_knn_path` and `$ls_alpha` are the same as in the in-memory method.
+
+```bash
+./apps/build_disk_index --data_type float --dist_fn $build_dis_method --knn_path $sr_knn_path --data_path $data_path --index_path_prefix $index_path_prefix -R $R -L $L -B $B -M $M -a $ls_alpha -T $T --QD $QD
+
+./apps/search_disk_index  --data_type float --dist_fn $search_dis_method --index_path_prefix $index_path_prefix --query_file $query_path --gt_file $gt_path --result_path $res_path_prefix -K $recall_K -T $T -L 10 20 30 40 50 60 80 100 --num_nodes_to_cache 10000
+```
+
+This setup can be executed via the `opt/disk.sh` script, which corresponds to the above code for reference.
