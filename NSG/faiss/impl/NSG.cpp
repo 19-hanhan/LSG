@@ -154,6 +154,8 @@ NSG::NSG(int R) : R(R), rng(0x0903) {
     L = R + 32;  // 相当于efcon
     C = R + 100; // 相当于canditate大小
     search_L = 16; // 最小search_L = 16
+
+    search_L = 16; // 最小search_L = 16
     ntotal = 0;
     is_built = false;
     srand(0x1998);
@@ -228,7 +230,7 @@ void NSG::build(
         bool verbose) {
     FAISS_THROW_IF_NOT(!is_built && ntotal == 0);
 
-    // 构图参数
+    // 输出构图参数
     if (verbose) {
         printf("NSG::build R=%d, L=%d, C=%d\n", R, L, C);
     }
@@ -260,7 +262,6 @@ void NSG::build(
             }
         }
     }
-    
 
     // 生成树结构，保证联通性
     int num_attached = tree_grow(storage, degrees);
@@ -270,6 +271,7 @@ void NSG::build(
     check_graph();
     is_built = true;
 
+    // 统计并输出图状况
     if (verbose) {
         int max = 0, min = 1e6;
         double avg = 0;
@@ -285,11 +287,11 @@ void NSG::build(
         }
 
         avg = avg / n;
-        printf("Degree Statistics: Max = %d, Min = %d, Avg = %lf\n",
+        printf("Degree Statistics: Max = %d, Min = %d, Avg = %lf\n", // 输出最大、最小、平均出度
                max,
                min,
                avg);
-        // printf("Attached nodes: %d\n", num_attached);
+        
     }
 }
 
@@ -379,7 +381,7 @@ void NSG::search_on_graph(
     for (int i = 0; i < init_ids.size(); i++) {
         int id = init_ids[i];
 
-        float dist = dis(id);
+        float dist = dis(id); //计算距离4
         retset[i] = Neighbor(id, dist, true);
 
         if (collect_fullset) {
@@ -405,7 +407,7 @@ void NSG::search_on_graph(
                 }
                 vt.set(id);
 
-                float dist = dis(id);
+                float dist = dis(id); //计算距离5
                 Neighbor nn(id, dist, true); 
                 if (collect_fullset) {
                     fullset.emplace_back(id, dist);
@@ -473,7 +475,7 @@ void NSG::search_on_graph_enhence_with_hubs(
     for (int i = 0; i < init_ids.size(); i++) {
         int id = init_ids[i];
         // printf("id = %d\n",id);
-        float dist = dis(id);
+        float dist = dis(id); //计算距离9
         // printf("dist = %f\n",dist);
         retset[i] = Neighbor(id, dist, true);
         // printf("retset[i] = %d\n",retset.size());
@@ -520,7 +522,7 @@ void NSG::search_on_graph_enhence_with_hubs(
                 vt.set(id);
                 visited_count++;  // 更新访问计数器
 
-                float dist = dis(id);
+                float dist = dis(id); //计算距离10
                 Neighbor nn(id, dist, true);
                 if (collect_fullset) {
                     fullset.emplace_back(id, dist);
@@ -575,16 +577,15 @@ void NSG::link(
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
-#pragma omp for schedule(dynamic, 100)
+#pragma omp for schedule(dynamic, 100) 
         for (int i = 0; i < ntotal; i++) {
             // 根据索引 i 重建存储向量，并将其结果存储在由 vec 管理的数组中
             // 获取原始向量存入vec中
             storage->reconstruct(i, vec.get());
-
-            // 设置基准点，用于计算距离
-            dis->set_query(vec.get());
-            //dis->set_query_idx(vec.get(),i); 
-            
+            // 设置基准点，用于距离计算
+            // nsg-lsg
+            // dis->set_query(vec.get());
+            dis->set_query_idx(vec.get(),i);
             // Collect the visited nodes into pool
             // 获取候选结点
             search_on_graph<true>(
@@ -598,18 +599,24 @@ void NSG::link(
             vt.advance();
         }
 
-
     } // omp parallel
 
+    // 不添加反向边
     std::vector<std::mutex> locks(ntotal);
 #pragma omp parallel
     {
+        //第3个距离计算器，用于添加反向边
         std::unique_ptr<DistanceComputer> dis(
                 storage_distance_computer(storage));
 
 #pragma omp for schedule(dynamic, 100)
         for (int i = 0; i < ntotal; ++i) {
-            add_reverse_links(i, locks, *dis, graph);
+            // nsg-lsg
+            //使用空指针设置虚假基准点（无用），以在对称距离计算中启用NICDM
+            const float* _ = nullptr;
+            dis->set_query_idx(_,i);
+
+            add_reverse_links(i, locks, *dis, graph); //添加反向边
         }
     } // omp parallel
 }
@@ -627,7 +634,7 @@ void NSG::sync_prune(
             continue;
         }
 
-        float dist = dis.symmetric_dis(q, id);
+        float dist = dis.symmetric_dis(q, id); //计算距离6
         pool.emplace_back(id, dist);
     }
 
@@ -651,7 +658,7 @@ void NSG::sync_prune(
                 break;
             }
             // 裁边：60度角
-            float djk = dis.symmetric_dis(result[t].id, p.id);
+            float djk = dis.symmetric_dis(result[t].id, p.id); //计算距离7
             if (djk < p.distance /* dik */) {
                 occlude = true;
                 break;
@@ -662,11 +669,20 @@ void NSG::sync_prune(
         }
     }
 
-    // 将邻居数量缩小 , 预留位置添加反向边
-    int r1 = R/2;
+    // // 限制邻居数量,预留位置添加反向边
+    // int r1 = R/2;
+    // for (size_t i = 0; i < R; i++) {
+    //     if (i < result.size() && i < r1) {
+    //         graph.at(q, i).id = result[i].id;
+    //         graph.at(q, i).distance = result[i].distance;
+    //     } else {
+    //         graph.at(q, i).id = EMPTY_ID;
+    //     }
+    // }
 
+    // 不预留反向边位置
     for (size_t i = 0; i < R; i++) {
-        if (i < result.size() && i < r1) {
+        if (i < result.size()) {
             graph.at(q, i).id = result[i].id;
             graph.at(q, i).distance = result[i].distance;
         } else {
@@ -675,7 +691,7 @@ void NSG::sync_prune(
     }
 }
 
-/*
+// 添加反向边(未预留位置)
 void NSG::add_reverse_links(
         int q,
         std::vector<std::mutex>& locks,
@@ -756,101 +772,101 @@ void NSG::add_reverse_links(
         }
     }
 }
-*/
 
+// // 添加反向边(已预留位置)
+// void NSG::add_reverse_links(
+//         int q, //某点
+//         std::vector<std::mutex>& locks,
+//         DistanceComputer& dis,
+//         nsg::Graph<Node>& graph) {
+        
+//         //遍历邻居
+//         for (size_t i = 0; i < R; i++) {
+//             //空位退出
+//             if (graph.at(q, i).id == EMPTY_ID) {
+//                 break;
+//             }
 
+//             Node sn(q, graph.at(q, i).distance); //将本点创建为反向邻居节点,用于添加到邻居的邻居列表中
+//             int des = graph.at(q, i).id; //邻居点id
 
-void NSG::add_reverse_links(
-        int q,
-        std::vector<std::mutex>& locks,
-        DistanceComputer& dis,
-        nsg::Graph<Node>& graph) {
-        for (size_t i = 0; i < R; i++) {
-        if (graph.at(q, i).id == EMPTY_ID) {
-            break;
-        }
+//             std::vector<Node> tmp_pool;
+//             int dup = 0;
+//             {
+//                 //锁
+//                 LockGuard guard(locks[des]);
+//                 //在邻居点的邻居列表中搜索
+//                 for (int j = 0; j < R; j++) {
+//                     //没找到，空位退出
+//                     if (graph.at(des, j).id == EMPTY_ID) {
+//                         break;
+//                     }
+//                     //找到（已有双向边）
+//                     if (q == graph.at(des, j).id) {
+//                         dup = 1;
+//                         break;
+//                     }
+//                     tmp_pool.push_back(graph.at(des, j)); //将邻居的邻居全部加入候选池
+//                 }
+//             }
 
-        Node sn(q, graph.at(q, i).distance);
-        int des = graph.at(q, i).id;
+//             // 已经建立双向边
+//             if (dup) {
+//                 continue;
+//             }
 
-        std::vector<Node> tmp_pool;
-        int dup = 0;
-        {
-            LockGuard guard(locks[des]);
-            for (int j = 0; j < R; j++) {
-                if (graph.at(des, j).id == EMPTY_ID) {
-                    break;
-                }
-                if (q == graph.at(des, j).id) {
-                    dup = 1;
-                    break;
-                }
-                tmp_pool.push_back(graph.at(des, j));
-            }
-        }
+//             float rt = 2;
+//             tmp_pool.push_back(sn); //将本点也加入候选池
+//             // printf("tmp_pool.size = %d\n",tmp_pool.size());
 
-        // 已经建立双向边
-        if (dup) {
-            continue;
-        }
+//             if (tmp_pool.size() > R) { // 添加反向边后边数大于R，进行裁边
+//                 std::vector<Node> result;
+//                 int start = 0; 
+                
+//                 int len = tmp_pool.size();
 
-        float rt = 2;
-        tmp_pool.push_back(sn);
-        // printf("tmp_pool.size = %d\n",tmp_pool.size());
-        if (tmp_pool.size() > R) { // 竞争裁边
-            std::vector<Node> result;
-            int start = 0; 
-            // 将后续结点放入，并不放入前边结点
-            int len = tmp_pool.size();
-            // printf("r= %d\n",len);
-            tmp_pool.erase(tmp_pool.begin(), tmp_pool.end() - (len - R/rt));
-            // printf("r2= %d\n",(int)tmp_pool.size());
-            std::sort(tmp_pool.begin(), tmp_pool.end());
-            result.push_back(tmp_pool[start]);
+//                 tmp_pool.erase(tmp_pool.begin(), tmp_pool.end() - (len - R/rt)); //从候选池中删除前面的部分节点，只保留后面 len - R/rt 个节点用于裁边计算
+//                 //(原本邻居表中的前面节点，距离更短，被裁剪的概率更低，减少计算)
 
-            while (result.size() < R-R/rt && (++start) < tmp_pool.size()) {
-                auto& p = tmp_pool[start];
-                bool occlude = false;
+//                 std::sort(tmp_pool.begin(), tmp_pool.end()); //重排序
+//                 result.push_back(tmp_pool[start]);
 
-                for (int t = 0; t < result.size(); t++) {
-                    if (p.id == result[t].id) {
-                        occlude = true;
-                        break;
-                    }
-                    float djk = dis.symmetric_dis(result[t].id, p.id);
-                    if (djk < p.distance /* dik */) {
-                        occlude = true;
-                        break;
-                    }
-                }
+//                 while (result.size() < R-R/rt && (++start) < tmp_pool.size()) {
+//                     auto& p = tmp_pool[start];
+//                     bool occlude = false;
 
-                if (!occlude) {
-                    result.push_back(p);
-                }
-            }
+//                     for (int t = 0; t < result.size(); t++) {
+//                         if (p.id == result[t].id) {
+//                             occlude = true;
+//                             break;
+//                         }
+//                         float djk = dis.symmetric_dis(result[t].id, p.id);//计算距离8
+//                         if (djk < p.distance /* dik */) { //60度裁边
+//                             occlude = true;
+//                             break;
+//                         }
+//                     }
 
-            // printf("r2= %d\n",(int)tmp_pool.size());
+//                     if (!occlude) {
+//                         result.push_back(p);
+//                     }
+//                 }
+//                 LockGuard guard(locks[des]);
+//                 for (int t = 0; t < result.size(); t++) {  
+//                     graph.at(des, t + R/rt) = result[t]; // 更新邻居表后半部分
+//                 }
 
-            {
-                // printf("ok\n");
-                // printf("pre = %d, prun = %d\n",graph.at(des, R/rt - 1).id, (int)result.size());
-                LockGuard guard(locks[des]);
-                for (int t = 0; t < result.size(); t++) {  
-                    graph.at(des, t + R/rt) = result[t]; // 前边部分不变，后边放入新的内容
-                }
-            }
-
-        } else { // 有多余空间
-            LockGuard guard(locks[des]);
-            for (int t = 0; t < R; t++) {
-                if (graph.at(des, t).id == EMPTY_ID) {
-                    graph.at(des, t) = sn;
-                    break;
-                }
-            }
-        }
-    }
-}
+//             } else { // 有多余空间,直接添加反向边
+//                 LockGuard guard(locks[des]);
+//                 for (int t = 0; t < R; t++) {
+//                     if (graph.at(des, t).id == EMPTY_ID) {
+//                         graph.at(des, t) = sn;
+//                         break;
+//                     }
+//                 }
+//             }
+//     }
+// }
 
 int NSG::tree_grow(Index* storage, std::vector<int>& degrees) {
     int root = enterpoint;
@@ -922,6 +938,8 @@ int NSG::attach_unlinked(
      * also make the graph hard to maintain, this implementation links the
      * unlinked node to the nearest node of which the degree is smaller than R.
      * It will keep the degree of all nodes to be no more than `R`.
+     * 注释部分解释了实现与原论文的不同之处：
+     * 该实现将未连接的节点链接到度数小于 R 的最近节点，而不是链接到生成树中的最近点，以保持所有节点的度数不超过 R
      */
 
     // find one unlinked node

@@ -33,6 +33,7 @@ using namespace nsg;
  * IndexNSG implementation
  **************************************************************/
 
+// 非默认方式
 IndexNSG::IndexNSG(int d, int R, MetricType metric)
         : Index(d, metric),
           nsg(R),
@@ -40,9 +41,7 @@ IndexNSG::IndexNSG(int d, int R, MetricType metric)
           storage(nullptr),
           is_built(false),
           GK(64),
-          // GK(200),
           build_type(0) {
-            // 设定nndescent参数
             nndescent_S = 10;
             nndescent_R = 100;
             nndescent_L = GK + 50;
@@ -166,7 +165,7 @@ void IndexNSG::search_enhence_with_hubs(
              
             VisitedTable vt(ntotal);
 
-            //第3个距离计算器，用于NSG的搜索
+            //第4个距离计算器，用于NSG的搜索
             DistanceComputer* dis = storage_distance_computer(storage);
             ScopeDeleter1<DistanceComputer> del(dis);
 
@@ -258,7 +257,6 @@ void IndexNSG::add(idx_t n, const float* x) {
     }
 
     // 构建近似KNN图
-
     // 暴力搜索方法构建 KNN 图
     if (build_type == 0) { // build with brute force search
 
@@ -306,6 +304,7 @@ void IndexNSG::add(idx_t n, const float* x) {
         index.nndescent.S = nndescent_S;
         index.nndescent.R = nndescent_R;
         index.nndescent.L = std::max(nndescent_L, GK + 50);
+        
         index.nndescent.iter = nndescent_iter;
         // 默认参数如下：
         // GK(64),
@@ -315,7 +314,7 @@ void IndexNSG::add(idx_t n, const float* x) {
         // nndescent_L = GK + 50;
         // nndescent_iter = 10;
         if (verbose) {
-            printf("  Build knn graph with NNdescent S=%d R=%d L=%d niter=%d\n",
+            printf("  Build knn graph with NNdescent S=%d R=%d L=%d iter=%d\n",
                    index.nndescent.S,
                    index.nndescent.R,
                    index.nndescent.L,
@@ -325,12 +324,8 @@ void IndexNSG::add(idx_t n, const float* x) {
         // prevent IndexNSG from deleting the storage
         index.own_fields = false;
 
-        auto start = std::chrono::high_resolution_clock::now();
         // nndescent构图
         index.add(n, x);
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration = end - start;
-        std::cout<<"nndescent构图运行时间:"<<duration.count()<<std::endl;
 
         // storage->add is already implicit called in IndexNSG.add
         ntotal = storage->ntotal;
@@ -524,8 +519,9 @@ IndexNSGFlat::IndexNSGFlat() {
 }
 
 IndexNSGFlat::IndexNSGFlat(int d, int R, MetricType metric)
-        : IndexNSG(new IndexFlat(d, metric), R) {
-        //: IndexNSG(new IndexFlat(d, METRIC_NICDM), R) {
+        // nsg-lsg
+        // : IndexNSG(new IndexFlat(d, metric), R) {
+        : IndexNSG(new IndexFlat(d, METRIC_NICDM), R) {
     own_fields = true;
     is_trained = true;
 }

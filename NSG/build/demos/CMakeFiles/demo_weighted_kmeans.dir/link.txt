@@ -1,1 +1,0 @@
-/usr/bin/g++ -g CMakeFiles/demo_weighted_kmeans.dir/demo_weighted_kmeans.cpp.o -o demo_weighted_kmeans  -Wl,-rpath,/root/faiss-1.7.1/build/faiss ../faiss/libfaiss.so 

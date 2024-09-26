@@ -113,10 +113,9 @@ struct NSG {
     int ntotal; ///< nb of nodes
 
     /// construction-time parameters
-    // NSG构图参数
     int R; ///< nb of neighbors per node
-    int L; ///< length of the search path at construction time，搜索深度
-    int C; ///< candidate pool size at construction time，候选池
+    int L; ///< length of the search path at construction time
+    int C; ///< candidate pool size at construction time
 
     // search-time parameters
     int search_L; ///< length of the search path

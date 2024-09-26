@@ -1,1 +1,0 @@
-/usr/bin/g++ -g CMakeFiles/demo_imi_flat.dir/demo_imi_flat.cpp.o -o demo_imi_flat  -Wl,-rpath,/root/faiss-1.7.1/build/faiss ../faiss/libfaiss.so 

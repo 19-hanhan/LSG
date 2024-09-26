@@ -161,7 +161,7 @@ void HNSW::print_neighbor_stats(int level) const {
     printf("   nb of neighbors that are also neighbor-of-neighbors: %.2f (%zd)\n",
            tot_common / normalizer,
            tot_common);
-    printf("max degree  %ld min degree %ld\n",maxn,minn);
+    printf("max degree  %d min degree %d\n",maxn,minn);
 }
 
 void HNSW::fill_with_random_links(size_t n) {

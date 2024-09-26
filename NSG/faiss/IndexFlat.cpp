@@ -104,10 +104,10 @@ size_t IndexFlat::remove_ids(const IDSelector& sel) {
     idx_t j = 0;
     for (idx_t i = 0; i < ntotal; i++) {
         if (sel.is_member(i)) {
-            // should be removed
+            // should be removed，被删除（跳过）
         } else {
             if (i > j) {
-                memmove(&xb[d * j], &xb[d * i], sizeof(xb[0]) * d);
+                memmove(&xb[d * j], &xb[d * i], sizeof(xb[0]) * d); //往前方空位移动，保持数据紧凑
             }
             j++;
         }
@@ -117,11 +117,11 @@ size_t IndexFlat::remove_ids(const IDSelector& sel) {
         ntotal = j;
         xb.resize(ntotal * d);
     }
-    return nremove;
+    return nremove; //返回过滤后的数据量
 }
 
 namespace {
-
+//NICDM距离计算器
 struct NICDMDistanceComputer : DistanceComputer {
     size_t d;
     Index::idx_t nb;
@@ -142,27 +142,33 @@ struct NICDMDistanceComputer : DistanceComputer {
         ndis++;
         float* gt = AVGDIS;
         float l2sqr = fvec_L2sqr(q, b + i * d, d);
-        return ~idx_q ? l2sqr / powf(sqrtf(gt[idx_q] * gt[i]), alpha) : l2sqr;
+        return ~idx_q ? l2sqr / powf(sqrtf(gt[idx_q] * gt[i]), alpha) : l2sqr; 
     }
 
+    // float symmetric_dis(idx_t i, idx_t j) override {
+    //     float* gt = AVGDIS;
+    //     float l2sqr = fvec_L2sqr(b + i * d, b + j * d, d);
+    //     return l2sqr / powf(sqrtf(gt[i] * gt[j]), alpha);
+    // }
+    
     float symmetric_dis(idx_t i, idx_t j) override {
         float* gt = AVGDIS;
         float l2sqr = fvec_L2sqr(b + i * d, b + j * d, d);
-        return l2sqr / powf(sqrtf(gt[i] * gt[j]), alpha);
+        return ~idx_q ? l2sqr / powf(sqrtf(gt[i] * gt[j]), alpha) : l2sqr;
     }
 
-    void set_query(const float* x) override {
+    void set_query(const float* x) override { //search阶段不设置idx_q
         q = x;
-    }
+    } 
 
-    void set_query_idx(const float* x, idx_t idx = -1) override {
+    void set_query_idx(const float* x, idx_t idx = -1) override { //build阶段设置idx_q
         q = x;
         idx_q = idx;
     }
 
 };
 
-// L2
+// METRIC_L2，L2距离计算器
 struct FlatL2Dis : DistanceComputer {
     size_t d;
     Index::idx_t nb;

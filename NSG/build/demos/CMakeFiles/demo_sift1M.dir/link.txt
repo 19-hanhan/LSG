@@ -1,1 +1,0 @@
-/usr/bin/g++ -g CMakeFiles/demo_sift1M.dir/demo_sift1M.cpp.o -o demo_sift1M  -Wl,-rpath,/root/faiss-1.7.1/build/faiss ../faiss/libfaiss.so 

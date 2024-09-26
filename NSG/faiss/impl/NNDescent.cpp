@@ -163,7 +163,7 @@ void NNDescent::join(DistanceComputer& qdis) {
     for (int n = 0; n < ntotal; n++) {
         graph[n].join([&](int i, int j) {
             if (i != j) {
-                float dist = qdis.symmetric_dis(i, j);
+                float dist = qdis.symmetric_dis(i, j); //计算距离3
                 graph[i].insert(j, dist);
                 graph[j].insert(i, dist);
             }
@@ -301,6 +301,7 @@ void NNDescent::nndescent(DistanceComputer& qdis, bool verbose) {
 }
 
 /// Sample a small number of points to evaluate the quality of KNNG built
+// 评估knn图构图质量
 void NNDescent::generate_eval_set(
         DistanceComputer& qdis,
         std::vector<int>& c,
@@ -312,7 +313,7 @@ void NNDescent::generate_eval_set(
         for (int j = 0; j < N; j++) {
             if (i == j)
                 continue; // skip itself
-            float dist = qdis.symmetric_dis(c[i], j);
+            float dist = qdis.symmetric_dis(c[i], j); //计算距离2
             tmp.push_back(Neighbor(j, dist, true));
         }
 
@@ -367,7 +368,7 @@ void NNDescent::init_graph(DistanceComputer& qdis) {
                 int id = tmp[j];
                 if (id == i)
                     continue;
-                float dist = qdis.symmetric_dis(i, id); //计算距离
+                float dist = qdis.symmetric_dis(i, id); //计算距离1
 
                 graph[i].pool.push_back(Neighbor(id, dist, true));
             }

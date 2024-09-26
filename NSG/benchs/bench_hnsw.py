@@ -8,17 +8,9 @@ import sys
 import numpy as np
 import faiss
 
-try:
-    from faiss.contrib.datasets_fb import DatasetSIFT1M
-except ImportError:
-    from faiss.contrib.datasets import DatasetSIFT1M
 
-# from datasets import load_sift1M
-from datasets import load_audio
-from datasets import load_random
-from datasets import load_glove
+
 from datasets import load_sift1M
-from datasets import load_sift10K
 
 
 k = int(sys.argv[1])
@@ -28,15 +20,9 @@ print("load data")
 
 xb, xq, xt, gt = load_sift1M()
 
-# xb, xq, xt, gt = load_sift1M()
-# nd = DatasetSIFT1M()
-# xq = ds.get_queries()
-# xb = ds.get_database()
-# gt = ds.get_groundtruth()
-# xt = ds.get_train()
+
 
 nq, d = xq.shape
-print("nq:{0} d:{1}".format(nq,d))
 
 if todo == []:
     todo = 'hnsw hnsw_sq ivf ivf_hnsw_quantizer kmeans kmeans_hnsw nsg'.split()
@@ -66,9 +52,7 @@ if 'hnsw' in todo:
 
     # this is the default, higher is more accurate and slower to
     # construct
-    # 大根堆
     index.hnsw.efConstruction = 40
-    # 小根堆没有限制
 
     print("add")
     # to see progress
@@ -77,46 +61,11 @@ if 'hnsw' in todo:
 
     print("search")
     for efSearch in 16, 32, 64, 128, 256:
-        # 搜索队列参数（有界队列）
         for bounded_queue in [True, False]:
             print("efSearch", efSearch, "bounded queue", bounded_queue, end=' ')
             index.hnsw.search_bounded_queue = bounded_queue
             index.hnsw.efSearch = efSearch
             evaluate(index)
-
-#nq:search集大小
-#d:数据集向量维数
-#执行命令：python benchs/bench_hnsw.py $recall $todo
-###
-if 'hnsw_pq' in todo:
-
-    print("Testing HNSW with product quantizer")
-    index=faiss.IndexHNSWPQ(d,16,16)
-
-    #候选集（大根堆）
-    index.hnsw.efConstruction = 40
-
-    tt0=time.time()
-    index.train(xt)
-    tt1=time.time()
-    print("\t %7.3f ms train time" % ((tt1 - tt0) * 1000.0 ))
-
-    print("add")
-    ta0=time.time()
-    index.verbose = True
-    index.add(xb)
-    ta1=time.time()
-    print("\t %7.3f ms train time" % ((ta1 - ta0) * 1000.0 ))
-
-    print("search")
-    for efSearch in 8, 16, 32, 64:
-        for bounded_queue in [True, False]:
-            print("efSearch", efSearch, "bounded queue", bounded_queue, end=' ')
-            index.hnsw.search_bounded_queue = bounded_queue
-            index.hnsw.efSearch = efSearch
-            evaluate(index)
-    
-
 
 if 'hnsw_sq' in todo:
 
