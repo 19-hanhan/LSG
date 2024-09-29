@@ -47,13 +47,13 @@ def read_i8bin(filename, start_idx=0, chunk_size=None):
     with open(filename, "rb") as f:
         nvecs, dim = np.fromfile(f, count=2, dtype=np.int32)
         nvecs = (nvecs - start_idx) if chunk_size is None else chunk_size
-        arr = np.fromfile(f, count=nvecs path dim, dtype=np.int8, offset=start_idx path 4 path dim)
+        arr = np.fromfile(f, count=nvecs * dim, dtype=np.int8, offset=start_idx * 4 * dim)
     return arr.reshape(nvecs, dim)
 
 def read_u8bin(filename, start_idx=0, chunk_size=None):
-    """ Read path.ibin file that contains int32 vectors
+    """ Read *.ibin file that contains int32 vectors
     Args:
-        :param filename (str): path to path.ibin file
+        :param filename (str): path to *.ibin file
         :param start_idx (int): start reading vectors from this index
         :param chunk_size (int): number of vectors to read.
                                  If None, read all vectors
@@ -64,8 +64,8 @@ def read_u8bin(filename, start_idx=0, chunk_size=None):
         nvecs, dim = np.fromfile(f, count=2, dtype=np.int32)
         nvecs = (nvecs - start_idx) if chunk_size is None else chunk_size
         # f.seek(4+4)
-        arr = np.fromfile(f, count=nvecs path dim, dtype=np.uint8,
-                          offset=start_idx path 4 path dim)
+        arr = np.fromfile(f, count=nvecs * dim, dtype=np.uint8,
+                          offset=start_idx * 4 * dim)
     return arr.reshape(nvecs, dim).astype(np.float32)
 
 def knn_result_read(fname):
@@ -73,7 +73,7 @@ def knn_result_read(fname):
         nq, k = np.fromfile(f, count=2, dtype=np.uint32)
         # nvecs = (nvecs - start_idx) if chunk_size is None else chunk_size
         # f.seek(4+4)
-        arr = np.fromfile(f, count=nq path k, dtype=np.uint32,
+        arr = np.fromfile(f, count=nq * k, dtype=np.uint32,
                           offset=0)
     return arr.reshape(nq, k)
 def range_result_read(fname):
@@ -86,15 +86,15 @@ def range_result_read(fname):
     D = np.fromfile(f, count=total_res, dtype="float32")
     return  I.reshape(nq, 1)
 
-simdir = '/home/path/'
+simdir = '/path/'
 
 def load_SimSearchNet(s=1):
     print("Loading SimSearchNet...", end='', file=sys.stderr)
-    basedir = '/data/path/SimSearchNet/'
+    basedir = '/data/wanghongya/SimSearchNet/'
     # xt = fvecs_read(basedir + "query.learn.50M.fbin")
     # print(xt.shape)
     million=1000000
-    xb = read_u8bin(basedir + "FB_ssnpp_database.u8bin",0,spathmillion)
+    xb = read_u8bin(basedir + "FB_ssnpp_database.u8bin",0,s*million)
     xq = read_u8bin(basedir + "FB_ssnpp_public_queries.u8bin",0,1000)
     gt = ivecs_read(basedir+'SimSearchNet%dm_groundtruth.ivecs'%s)[:1000,:]
     print("done", file=sys.stderr)
@@ -104,7 +104,7 @@ def load_SimSearchNet(s=1):
 
 def load_text_to_image():
     print("Loading text_to_image...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/Text-to-Image/'
+    basedir = '/path/dataset/Text-to-Image/'
     xt = fvecs_read(basedir + "query.learn.50M.fbin")
     print(xt.shape)
     xb = fvecs_read(basedir + "ukbench_base.fvecs")
@@ -115,7 +115,7 @@ def load_text_to_image():
 
 def load_spacev():
     print("Loading spacev...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/spacev/'
+    basedir = '/path/dataset/spacev/'
     xb = mmap_fvecs(basedir+'spacev10m_base.fvecs')
     xq = mmap_fvecs(basedir + 'spacev10m_query.fvecs')
     xb = sanitize(xb[:])
@@ -125,7 +125,7 @@ def load_spacev():
 
 def load_sift1M():
     print("Loading sift1M...", end='', file=sys.stderr)
-    basedir = '/home/path/sift1M/'
+    basedir = '/path/sift1M/'
     # basedir = '/mnt/d/github/sift1M/'
     xt = fvecs_read(basedir + "sift_learn.fvecs")
     xb = fvecs_read(basedir + "sift_base.fvecs")
@@ -135,27 +135,27 @@ def load_sift1M():
 
     return xb, xq, xt, gt
 def load_deep():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load deep.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/deep1b/'
+    basedir = '/path/deep1b/'
     
     dbsize = 10
-    xb = mmap_fvecs('/data/path/data_disk/deep1B_base.fvecs')
+    xb = mmap_fvecs('/data/wanghongya/data_disk/deep1B_base.fvecs')
     xq = mmap_fvecs(basedir + 'deep1B_queries.fvecs')
     # xt = mmap_fvecs(basedir + 'deep1B_learn.fvecs')
     # trim xb to correct size
-    xb = sanitize(xb[:dbsize path 1000 path 1000])
+    xb = sanitize(xb[:dbsize * 1000 * 1000])
     # xt = sanitize(xt[:500000])
     xq = sanitize(xq[:10000])
     gt = ivecs_read(basedir + 'deep%dM1_groundtruth.ivecs' % dbsize)
   
     return xb, xq, gt
 def load_deep1m():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load deep1m.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/deep1b/'
+    basedir = '/path/deep1b/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir+'100w.fvecs')
@@ -171,7 +171,7 @@ def load_deep1m():
 def load_sift10K():
     print("Loading sift10K...", end='', file=sys.stderr)
     # basedir = simdir + '1M/sift10K/'
-    basedir = '/home/path/dataset/sift10K/'
+    basedir = '/path/dataset/sift10K/'
     xt = fvecs_read(basedir + "siftsmall_learn.fvecs")
     xb = fvecs_read(basedir + "siftsmall_base.fvecs")
     xq = fvecs_read(basedir + "siftsmall_query.fvecs")
@@ -182,7 +182,7 @@ def load_sift10K():
 def load_msong():
     print("Loading msong...", end='', file=sys.stderr)
     # basedir = simdir + '1M/sift10K/'
-    basedir = '/home/path/dataset/millionSong/'
+    basedir = '/path/dataset/millionSong/'
     # xt = fvecs_read(basedir + "siftsmall_learn.fvecs")
     xb = fvecs_read(basedir + "millionSong_base.fvecs")
     xq = fvecs_read(basedir + "millionSong_query.fvecs")
@@ -200,7 +200,7 @@ def load_bigann():
     xq = bvecs_mmap(basedir + 'queries.bvecs')
     xt = bvecs_mmap(basedir + 'learn.bvecs')
     # trim xb to correct size
-    xb = sanitize(xb[:dbsize path 1000 path 1000])
+    xb = sanitize(xb[:dbsize * 1000 * 1000])
     xt = sanitize(xt[:250000])
     xq = sanitize(xq)
     gt = ivecs_read(basedir + 'gnd/idx_%dM.ivecs' % dbsize)
@@ -208,7 +208,7 @@ def load_bigann():
     return xb, xq, xt, gt
 def load_tiny5m():
     print("load tiny5m")
-    basedir='/data/path/tiny5m/'
+    basedir='/data/wanghongya/tiny5m/'
     xb = mmap_fvecs(basedir + 'tiny5m_base.fvecs')
     xq = mmap_fvecs(basedir + 'tiny5m_query.fvecs')
     xt = mmap_fvecs(basedir + 'tiny5m_query.fvecs')
@@ -218,10 +218,10 @@ def load_tiny5m():
     return xb, xq, xt, gt
 
 # def load_deep10m():
-#     # simdir = '/home/path/'
+#     # simdir = '/path/'
 #     print("load deep10m.....")
 #     # basedir = simdir + 'deep1b/'
-#     basedir = '/home/path/deep1b/'
+#     basedir = '/path/deep1b/'
     
 #     dbsize = 10
 #     xb = mmap_fvecs(basedir + 'deep10M.fvecs')
@@ -235,16 +235,16 @@ def load_tiny5m():
 #     return xb, xq, xt, gt
 
 def load_deep():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load deep.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/data/path/Deep/'
+    basedir = '/data/wanghongya/Deep/'
     dbsize = 10
     xb = mmap_fvecs(basedir + 'deep1B_base.fvecs')
     xq = mmap_fvecs(basedir + 'deep1B_queries.fvecs')
     xt = mmap_fvecs(basedir + 'deep1B_learn.fvecs')
     # trim xb to correct size
-    xb = sanitize(xb[:dbsize path 1000 path 1000])
+    xb = sanitize(xb[:dbsize * 1000 * 1000])
     xt = sanitize(xt[:500000])
     xq = sanitize(xq[:10000])
     gt = ivecs_read(basedir + 'deep%dM_groundtruth.ivecs' % dbsize)
@@ -252,10 +252,10 @@ def load_deep():
 
 # ukbench 1M
 def load_ukbench():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load ukbench.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/ukbench/'
+    basedir = '/path/dataset/ukbench/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'ukbench_base.fvecs')
@@ -268,10 +268,10 @@ def load_ukbench():
     return xb, xq, gt
 # trevi 1M
 def load_trevi():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load trevi.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/trevi/'
+    basedir = '/path/dataset/trevi/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'trevi_base.fvecs')
@@ -287,7 +287,7 @@ def load_trevi():
 # enron 
 def load_enron():
     print("load enron.....")
-    basedir = '/home/path/dataset/enron/'
+    basedir = '/path/dataset/enron/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'enron_base.fvecs')
@@ -303,7 +303,7 @@ def load_enron():
 # crawl 
 def load_crawl():
     print("load crawl.....")
-    basedir = '/home/path/dataset/crawl/'
+    basedir = '/path/dataset/crawl/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'crawl_base.fvecs')
@@ -315,10 +315,10 @@ def load_crawl():
     return xb, xq, gt
 
 def load_notre():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load notre.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/notre/'
+    basedir = '/path/dataset/notre/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'notre_base.fvecs')
@@ -332,10 +332,10 @@ def load_notre():
 
     return xb, xq, gt
 def load_mnist():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load mnist.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/MNIST/'
+    basedir = '/path/dataset/MNIST/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'MNIST_base.fvecs')
@@ -350,10 +350,10 @@ def load_mnist():
     return xb, xq, gt
 # nuswide 1M
 def load_nuswide():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load nuswide.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/nuswide/'
+    basedir = '/path/dataset/nuswide/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'nuswide_base.fvecs')
@@ -368,17 +368,17 @@ def load_nuswide():
     return xb, xq, gt
 # gist 1M
 def load_gist():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     print("load gist.....")
     # basedir = simdir + 'deep1b/'
-    basedir = '/home/path/dataset/gist/'
+    basedir = '/path/dataset/gist/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'gist_base.fvecs')
     xq = mmap_fvecs(basedir + 'gist_query.fvecs')
     xt = mmap_fvecs(basedir + 'gist_query.fvecs')
     # trim xb to correct size
-    xb = sanitize(xb[:dbsize path 1000 path 1000])
+    xb = sanitize(xb[:dbsize * 1000 * 1000])
     # xt = sanitize(xt[:100000])
     xq = sanitize(xq[:1000])
     gt = ivecs_read(basedir + 'gist_groundtruth.ivecs')
@@ -388,10 +388,10 @@ def load_gist():
 
 # glove 1M
 def load_glove():
-    # simdir = '/home/path/'
+    # simdir = '/path/'
     # basedir = simdir + 'deep1b/'
 
-    basedir = '/home/path/dataset/glove/'
+    basedir = '/path/dataset/glove/'
     
     dbsize = 1
     xb = mmap_fvecs(basedir + 'glove_base.fvecs')
@@ -408,7 +408,7 @@ def load_glove():
 
 def load_glove2m():
     print("load glove2M.....", end='', file=sys.stderr)
-    basedir='/home/path/dataset/glove2.2m/'
+    basedir='/path/dataset/glove2.2m/'
     xb = mmap_fvecs(basedir + 'glove2.2m_base.fvecs')
     xq = mmap_fvecs(basedir + 'glove2.2m_query.fvecs')
     xb = sanitize(xb[:])
@@ -419,7 +419,7 @@ def load_glove2m():
     
 def load_audio():
     print("Loading audio...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/audio/'
+    basedir = '/path/dataset/audio/'
     xt = fvecs_read(basedir + "audio_base.fvecs")
     xb = fvecs_read(basedir + "audio_base.fvecs")
     xq = fvecs_read(basedir + "audio_query.fvecs")
@@ -429,7 +429,7 @@ def load_audio():
 
 def load_sun():
     print("Loading sun...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/sun/'
+    basedir = '/path/dataset/sun/'
     xt = fvecs_read(basedir + "sun_base.fvecs")
     xb = fvecs_read(basedir + "sun_base.fvecs")
     xq = fvecs_read(basedir + "sun_query.fvecs")
@@ -439,7 +439,7 @@ def load_sun():
 
 def load_random():
     print("Loading random...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/random/'
+    basedir = '/path/dataset/random/'
     xt = fvecs_read(basedir + "random_base.fvecs")
     xb = fvecs_read(basedir + "random_base.fvecs")
     xq = fvecs_read(basedir + "random_query.fvecs")
@@ -449,7 +449,7 @@ def load_random():
 
 def load_imageNet():
     print("Loading imageNet...", end='', file=sys.stderr)
-    basedir = '/home/path/dataset/imageNet/'
+    basedir = '/path/dataset/imageNet/'
     xt = fvecs_read(basedir + "imageNet_base.fvecs")
     xb = fvecs_read(basedir + "imageNet_base.fvecs")
     xq = fvecs_read(basedir + "imageNet_query.fvecs")
@@ -479,6 +479,6 @@ def evaluate(index, xq, gt, k):
     i = 1
     while i <= k:
         recalls[i] = (I[:, :i] == gt[:, :1]).sum() / float(nq)
-        i path= 10
+        i *= 10
 
-    return (t1 - t0) path 1000.0 / nq, recalls
+    return (t1 - t0) * 1000.0 / nq, recalls
