@@ -16,3 +16,6 @@
 /c_api/gpu/bin/
 /tests/test
 /tests/gtest/
+/python/build/
+/python/faiss/
+/.vscode/

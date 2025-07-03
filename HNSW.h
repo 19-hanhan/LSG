@@ -61,7 +61,7 @@ struct HNSW {
     idx_t d;
 
     /// called before computing distances
-    virtual void set_query(const float *x) = 0;
+    virtual void set_query(const float *x, storage_idx_t idx = -1) = 0;
 
     /// compute distance of vector i to current query
     virtual float operator () (storage_idx_t i) = 0;

@@ -277,7 +277,7 @@ struct FlatHammingDis : HNSW::DistanceComputer {
 
   // NOTE: Pointers are cast from float in order to reuse the floating-point
   //   DistanceComputer.
-  void set_query(const float *x) override {
+  void set_query(const float *x, HNSW::storage_idx_t idx = -1) override {
     hc.set((uint8_t *)x, code_size);
   }
 

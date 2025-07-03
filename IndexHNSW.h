@@ -78,6 +78,10 @@ struct IndexHNSW : Index {
     bool own_fields;
     Index *storage;
 
+    void set_local_scaling(bool enable);
+    void set_neighbor_radius(const float* list);
+    void set_ls_alpha(const float alpha);
+
     ReconstructFromNeighbors *reconstruct_from_neighbors;
 
     explicit IndexHNSW (int d = 0, int M = 32);

@@ -59,6 +59,59 @@ using DistanceComputer = HNSW::DistanceComputer;
 
 HNSWStats hnsw_stats;
 
+bool USE_LS = false;
+const float* NB_RADIUS = nullptr;
+float ALPHA = 1.0;
+
+void IndexHNSW::set_local_scaling(bool enable) { USE_LS = enable; }
+void IndexHNSW::set_neighbor_radius(const float* list) { NB_RADIUS = list; }
+void IndexHNSW::set_ls_alpha(const float alpha) { ALPHA = alpha; }
+
+namespace {
+
+struct LocalScalingDis : DistanceComputer {
+    Index::idx_t nb;
+    const float *q;
+    const float *b;
+    size_t ndis;
+    storage_idx_t q_id;
+
+    LocalScalingDis(const IndexFlatL2 & storage, const float *q = nullptr): q(q) {
+        nb = storage.ntotal;
+        d = storage.d;
+        b = storage.xb.data();
+        ndis = 0;
+    }
+    
+    float operator() (storage_idx_t i) override {
+        ndis++;
+        return fvec_ls(q_id, i);
+    }
+
+    float symmetric_dis(storage_idx_t i, storage_idx_t j) override {
+        return fvec_ls(i, j);
+    }
+
+    float fvec_ls(storage_idx_t i, storage_idx_t j) {
+        float l2_sqr = fvec_L2sqr(b + i * d, b + j * d, d);
+        return l2_sqr / powf(NB_RADIUS[i] * NB_RADIUS[j], ALPHA);
+    }
+
+    void set_query(const float *x, storage_idx_t idx = -1) override {
+        q = x;
+        q_id = idx;
+    }
+
+    virtual ~LocalScalingDis() {
+#pragma omp critical
+        {
+            hnsw_stats.ndis += ndis;
+        }
+    }
+};
+
+}
+
 /**************************************************************
  * add / search blocks of descriptors
  **************************************************************/
@@ -147,7 +200,7 @@ void hnsw_add_vertices(IndexHNSW &index_hnsw,
 #pragma omp  for schedule(dynamic)
                 for (int i = i0; i < i1; i++) {
                     storage_idx_t pt_id = order[i];
-                    dis->set_query (x + (pt_id - n0) * dis->d);
+                    dis->set_query (x + (pt_id - n0) * dis->d, pt_id);
 
                     hnsw.add_with_locks(*dis, pt_level, pt_id, locks, vt);
 
@@ -214,6 +267,7 @@ void IndexHNSW::search (idx_t n, const float *x, idx_t k,
                         float *distances, idx_t *labels) const
 
 {
+    FAISS_ASSERT(USE_LS == false);
 
 #pragma omp parallel
     {
@@ -576,7 +630,7 @@ struct GenericDistanceComputer: DistanceComputer {
         return fvec_L2sqr(buf.data() + d, buf.data(), d);
     }
 
-    void set_query(const float *x) override {
+    void set_query(const float *x, storage_idx_t idx = -1) override {
         q = x;
     }
 
@@ -856,7 +910,7 @@ struct FlatL2Dis: DistanceComputer {
         ndis = 0;
     }
 
-    void set_query(const float *x) override {
+    void set_query(const float *x, storage_idx_t idx = -1) override {
         q = x;
     }
 
@@ -888,6 +942,7 @@ IndexHNSWFlat::IndexHNSWFlat(int d, int M):
 
 DistanceComputer * IndexHNSWFlat::get_distance_computer () const
 {
+    if (USE_LS) return new LocalScalingDis (*dynamic_cast<IndexFlatL2*> (storage));
     return new FlatL2Dis (*dynamic_cast<IndexFlatL2*> (storage));
 }
 
@@ -951,7 +1006,7 @@ struct PQDis: DistanceComputer {
       ndis = 0;
     }
 
-    void set_query(const float *x) override {
+    void set_query(const float *x, storage_idx_t idx = -1) override {
         pq.compute_distance_table(x, precomputed_table.data());
     }
 
@@ -1029,7 +1084,7 @@ struct SQDis: DistanceComputer {
       dc = sq.get_distance_computer();
     }
 
-    void set_query(const float *x) override {
+    void set_query(const float *x, storage_idx_t idx = -1) override {
         q = x;
     }
 
@@ -1100,7 +1155,7 @@ struct Distance2Level: DistanceComputer {
         return fvec_L2sqr(buf.data() + d, buf.data(), d);
     }
 
-    void set_query(const float *x) override {
+    void set_query(const float *x, storage_idx_t idx = -1) override {
         q = x;
     }
 };
