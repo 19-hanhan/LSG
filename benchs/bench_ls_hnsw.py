@@ -24,7 +24,7 @@ parser.add_argument("--query_k", type=int, default=10, help="Number of results t
 parser.add_argument("--slow_test", action='store_true', help="Run slow test with big efSearch (default: False)")
 parser.add_argument("--use_ls", action='store_true', help="Use local scaling distance for build (default: False)")
 parser.add_argument("--ls_k", type=int, default=10, help="Number of neighbor for neighbor radius (default: 10)")
-parser.add_argument("--ls_sample_num", type=int, default=10000, help="Number of samples for neighbor radius (default: 10000)")
+parser.add_argument("--ls_sample_num", type=int, default=None, help="Number of samples for neighbor radius (default: num_base * 0.01)")
 parser.add_argument("--ls_alpha", type=float, default=1.0, help="Smoothness parameter for local scaling (default: 1.0)")
 
 ## generate para
@@ -34,13 +34,17 @@ if args.slow_test:
     efs.extend(efs_big)
 
 ## load dataset
-print(f"para: datadir[{args.datadir}],dataset[{args.dataset}],m[{args.m}],efc[{args.efc}]")
-if (args.use_ls):
-    print(f"\tls_para: use_ls[{args.use_ls}],ls_k[{args.ls_k}],ls_sample_num[{args.ls_sample_num}],ls_alpha[{args.ls_alpha}]")
 xb, xq, xt, gt = load_data(args.datadir, args.dataset)
 nq, d = xq.shape
 nb = xb.shape[0]
 print("nq: [%d], d: [%d]" % (nq, d))
+
+## set default para
+args.ls_sample_num = nb // 100
+
+print(f"para: datadir[{args.datadir}],dataset[{args.dataset}],m[{args.m}],efc[{args.efc}]")
+if (args.use_ls):
+    print(f"\tls_para: use_ls[{args.use_ls}],ls_k[{args.ls_k}],ls_sample_num[{args.ls_sample_num}],ls_alpha[{args.ls_alpha}]")
 
 def generate_neighbor_radius():
     print(f"clac neighbor radius by FlatL2")

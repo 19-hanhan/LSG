@@ -83,7 +83,7 @@ You can view the help message by running: `python benchs/bench_ls_hnsw.py -h`
 
 - `ls_k`: Number of neighbor for neighbor radius (default: 10)
 
-- `nsample`: Number of samples for neighbor radius (default: 10000)
+- `ls_nsample_num`: Number of samples for neighbor radius (default: num_base * 0.01)
 
 - `ls_alpha`: Smoothness parameter for local scaling (default: 1.0)
 
