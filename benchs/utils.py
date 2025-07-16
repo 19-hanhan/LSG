@@ -53,5 +53,8 @@ def load_data(prefix, dataset, *, ntrain=65536):
     print("done", file=sys.stderr)
     return xb, xq, xt, gt
 
-def matrix_recall(ids, gt, len):
-    return np.sum(ids == gt[:, :len], axis=1).sum() / float(ids.shape[0])
+def matrix_recall(ids, gt, at):
+    set_a = [set(row) for row in ids]
+    set_b = [set(row) for row in gt[:, :at]]
+    count = sum(len(sa & sb) for sa, sb in zip(set_a, set_b))
+    return count / float(ids.shape[0]) / at
