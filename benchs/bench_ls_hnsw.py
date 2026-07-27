@@ -3,6 +3,7 @@ import time
 sys.path.insert(0, './python')
 import faiss
 import numpy as np
+import os
 from argparse import ArgumentParser
 from utils import load_data, matrix_recall
 
@@ -58,6 +59,10 @@ def generate_neighbor_radius():
     return np.mean(D ** 0.5, axis=1)
 
 ## set build para
+if not hasattr(faiss, 'IndexHNSWFlat'):
+    print("Error: faiss.IndexHNSWFlat not found. Please ensure faiss is installed correctly.")
+    sys.exit(1)
+
 index = faiss.IndexHNSWFlat(d, args.m)
 index.verbose = True
 index.hnsw.efConstruction = args.efc
